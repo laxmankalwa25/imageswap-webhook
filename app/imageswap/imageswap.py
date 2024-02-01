@@ -437,8 +437,8 @@ def main():
         debug=False,
         threaded=True,
         ssl_context=(
-            "./tls/cert.pem",
-            "./tls/key.pem",
+            "./tls/tls.crt",
+            "./tls/tls.key",
         ),
     )
 

@@ -41,7 +41,7 @@ imageswap_namespace_name = os.environ["IMAGESWAP_NAMESPACE_NAME"]
 imageswap_pod_name = os.environ["IMAGESWAP_POD_NAME"]
 imageswap_disable_auto_mwc = os.getenv("IMAGESWAP_DISABLE_AUTO_MWC", "FALSE")
 imageswap_tls_pair_secret_name = "imageswap-tls"
-imageswap_tls_rootca_secret_name = "imageswap-tls-ca"
+imageswap_tls_rootca_secret_name = "imageswap-tls"
 imageswap_byoc_annotation = "imageswap-byoc"
 imageswap_service_name = "imageswap"
 imageswap_tls_path = "/tls"
@@ -91,13 +91,13 @@ def check_for_byoc(namespace, secret, core_api):
                 )
                 sys.exit(1)
 
-        if "rootca.pem" in secret.data and secret.data["rootca.pem"] != "":
+        if "ca.crt" in secret.data and secret.data["ca.crt"] != "":
 
             return True
 
         else:
 
-            logging.error(f'No key found or value is blank for "rootca.pem" in "{secret.metadata.name}" secret')
+            logging.error(f'No key found or value is blank for "ca.crt" in "{secret.metadata.name}" secret')
             sys.exit(1)
 
     else:
@@ -371,7 +371,7 @@ def cert_expired(namespace, tls_secret):
     """Function to check tls certificate return number of days until expiration"""
 
     current_datetime = datetime.datetime.now()
-    tls_cert_decoded = base64.b64decode(tls_secret.data["cert.pem"])
+    tls_cert_decoded = base64.b64decode(tls_secret.data["tls.crt"])
     tls_cert = x509.load_pem_x509_certificate(tls_cert_decoded, default_backend())
     expire_days = tls_cert.not_valid_after - current_datetime
 
@@ -388,8 +388,8 @@ def cert_expired(namespace, tls_secret):
 def cert_should_update(namespace, secret_exists, tls_secret, imageswap_tls_byoc):
     """Function to check if tls certificate should be updated"""
 
-    tls_cert_key = "cert.pem"
-    tls_key_key = "key.pem"
+    tls_cert_key = "tls.crt"
+    tls_key_key = "tls.key"
 
     if tls_secret.data != None:
 
@@ -462,8 +462,8 @@ def read_tls_pair(namespace, secret_name, tls_pair, core_api):
 
             return secret, tls_pair, secret_exists, False
 
-    tls_cert_pem = base64.b64decode(secret.data["cert.pem"])
-    tls_key_pem = base64.b64decode(secret.data["key.pem"])
+    tls_cert_pem = base64.b64decode(secret.data["tls.crt"])
+    tls_key_pem = base64.b64decode(secret.data["tls.key"])
 
     if tls_cert_pem != "" or tls_key_pem != "":
 
@@ -534,8 +534,8 @@ def write_tls_pair(
         )
 
         secret_data = {
-            "cert.pem": base64.b64encode(tls_pair["cert"]).decode("utf-8").rstrip(),
-            "key.pem": base64.b64encode(tls_pair["key"]).decode("utf-8").rstrip(),
+            "tls.crt": base64.b64encode(tls_pair["cert"]).decode("utf-8").rstrip(),
+            "tls.key": base64.b64encode(tls_pair["key"]).decode("utf-8").rstrip(),
         }
 
         secret = client.V1Secret(metadata=secret_metadata, data=secret_data, type="tls")
@@ -573,8 +573,8 @@ def write_tls_pair(
         }
 
         secret.data = {
-            "cert.pem": base64.b64encode(tls_pair["cert"]).decode("utf-8").rstrip(),
-            "key.pem": base64.b64encode(tls_pair["key"]).decode("utf-8").rstrip(),
+            "tls.crt": base64.b64encode(tls_pair["cert"]).decode("utf-8").rstrip(),
+            "tls.key": base64.b64encode(tls_pair["key"]).decode("utf-8").rstrip(),
         }
 
         try:
@@ -605,10 +605,10 @@ def write_tls_pair(
     logging.info("Writing cert and key locally")
     logging.debug(f"TLS Pair: {tls_pair}")
 
-    with open(f"{imageswap_tls_path}/cert.pem", "wb") as cert_file:
+    with open(f"{imageswap_tls_path}/tls.crt", "wb") as cert_file:
         cert_file.write(tls_pair["cert"])
 
-    with open(f"{imageswap_tls_path}/key.pem", "wb") as key_file:
+    with open(f"{imageswap_tls_path}/tls.key", "wb") as key_file:
         key_file.write(tls_pair["key"])
 
 
@@ -724,7 +724,7 @@ def get_rootca(namespace, configuration, imageswap_tls_byoc, core_api):
                 logging.debug(f"Exception:\n{exception}\n")
                 sys.exit(1)
 
-        root_ca = secret.data["rootca.pem"]
+        root_ca = secret.data["ca.crt"]
 
     else:
 

@@ -16,5 +16,5 @@
 bind = ":5000"
 workers = 2
 threads = 2
-certfile = "/tls/cert.pem"
-keyfile = "/tls/key.pem"
+certfile = "/tls/tls.crt"
+keyfile = "/tls/tls.key"
